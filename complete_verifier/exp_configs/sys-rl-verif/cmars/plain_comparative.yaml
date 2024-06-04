@@ -1,0 +1,16 @@
+general:
+  enable_incomplete_verification: True
+model:
+  name: cmars
+  input_shape: [1, 1, 38]
+specification:
+  vnnlib_path: /home/mzi/sys-rl-verif/applications/cmars/vnnlib/plain_comparative/in19_eps001_out15_0_14.vnnlib
+attack:
+  pgd_order: skip
+solver:
+  batch_size: 256  # Number of parallel domains to compute on GPU.
+  batch_size: 4096
+  beta-crown:
+    iteration: 20
+bab:
+  timeout: 600

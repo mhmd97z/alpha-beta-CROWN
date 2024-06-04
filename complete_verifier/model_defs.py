@@ -1707,3 +1707,12 @@ class Step_carvana(nn.Module):
         x = x.sum(1, keepdim=True)
 
         return x
+
+def cmars() -> nn.Sequential:
+    from cmars_model import get_plain_comparative_cmars    
+    return get_plain_comparative_cmars()
+
+
+def pensieve() -> nn.Sequential:
+    from pensieve_model import get_plain_comparative_pensieve
+    return get_plain_comparative_pensieve()

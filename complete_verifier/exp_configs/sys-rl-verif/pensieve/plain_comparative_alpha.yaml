@@ -1,0 +1,33 @@
+general:
+  enable_incomplete_verification: False
+  # complete_verifier: skip
+model:
+  name: pensieve
+  input_shape: [1, 1, 96]
+specification:
+  vnnlib_path: /home/mzi/sys-rl-verif/applications/pensieve/vnnlib/eps001_0_5.vnnlib
+solver:
+  batch_size: 2048
+  auto_enlarge_batch_size: true
+  bound_prop_method: alpha-crown
+  # alpha-crown:
+  #   share_alphas: true
+  #   full_conv_alpha: false
+  #   lr_alpha: 0.1
+  #   lr_decay: 0.98  # exponential decay.
+  #   iteration: 10  # If large, need to make sure decay is not too small.
+  beta-crown:
+    iteration: 10
+bab:
+  initial_max_domains: 1000
+  timeout: 3600
+  branching:
+    method: sb
+    input_split:
+      enable: True
+      adv_check: .inf
+      sb_coeff_thresh: 0.1
+      split_partitions: 10
+      writer_path: "results/log/pensieve/input_alpha_"
+attack:
+  pgd_order: input_bab

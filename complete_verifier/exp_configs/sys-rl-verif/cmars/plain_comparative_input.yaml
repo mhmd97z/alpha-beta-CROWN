@@ -1,0 +1,32 @@
+general:
+  enable_incomplete_verification: False
+  # complete_verifier: skip
+model:
+  name: cmars
+  input_shape: [1, 1, 38]
+specification:
+  vnnlib_path: /home/mzi/sys-rl-verif/applications/cmars/vnnlib/plain_comparative/partial_range/in19_lower04_upper06_eps001_out15_0_14.vnnlib
+solver:
+  batch_size: 4096
+  auto_enlarge_batch_size: true
+  # bound_prop_method: forward+crown
+  bound_prop_method: alpha-crown
+  alpha-crown:
+    share_alphas: true
+  beta-crown:
+    iteration: 10
+bab:
+  initial_max_domains: 1000
+  timeout: 36000
+  branching:
+    method: sb
+    input_split:
+      enable: True
+      adv_check: .inf
+      sb_coeff_thresh: 0.1
+      split_partitions: 20
+      # writer_path: "results/log/cmars/alpha/alpha_partition20_"
+      # if_repetition: True
+      # if_split_only_copy_one: False
+attack:
+  pgd_order: input_bab

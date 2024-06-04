@@ -1,0 +1,50 @@
+general:
+  # enable_incomplete_verification: True
+  complete_verifier: skip
+  root_path: ../../vnncomp2021/benchmarks/cifar10_resnet
+model:
+  name: plain_comparative
+  input_shape: [1, 1, 8]
+specification:
+  vnnlib_path: /home/mzi/sys-rl-verif/alpha-beta-CROWN/complete_verifier/exp_configs/sys-rl-verif/prop.vnn
+attack:
+  pgd_order: skip
+solver:
+  batch_size: 256  # Number of parallel domains to compute on GPU.
+  alpha-crown:
+    lr_alpha: 0.1
+    lr_decay: 0.98  # exponential decay.
+    iteration: 20  # If large, need to make sure decay is not too small.
+bab:
+  cut:
+    enabled: True
+    bab_cut: False
+    implication: False
+    cplex_cuts: False
+
+  # invprop:
+  #   apply_output_constraints_to: ["/input"]
+  
+  # alpha-crown:
+  #   iteration: 20  # Number of iterations taken to optimize in net.build
+  #   # lr_decay: 0.98  # exponential decay.
+  # beta-crown:
+  #   lr_beta: 0.20
+  #   iteration: 5
+  #   all_node_split_LP: True
+  #   enable_opt_interm_bounds: False
+# bab:
+  # initial_max_domains: 1000
+  # interm_transfer: True # this needs to be investigated!
+  # recompute_interm: False
+  # get_upper_bound: False
+  # if_comparative: True
+  # mask_last_layer_heaviside: False
+  # prune_first_layer_heaviside: True
+  # prune_irrelevant_nodes: True
+  # pruning_in_iteration: False # to be investigated
+  # branching:
+  #   method: random 
+  # method: kfsb-intercept-only
+  # candidates: 2
+  # reduceop: max
