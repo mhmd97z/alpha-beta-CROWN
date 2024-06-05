@@ -648,6 +648,9 @@ class ConfigHandler:
         self.add_argument("--if_log_repetition", default=False,
                           help='Whether to keep repetition count.',
                           hierarchy=h + ["if_log_repetition"])
+        self.add_argument("--if_pickle_domains", default=False,
+                          help='Whether pickle the domains.',
+                          hierarchy=h + ["if_pickle_domains"])
         self.add_argument("--sb_margin_weight", default=1.0, type=float,
                           help='Weight for the margin term in the sb heuristic.',
                           hierarchy=h + ["sb_margin_weight"])

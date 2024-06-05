@@ -17,7 +17,7 @@ solver:
     iteration: 10
 bab:
   initial_max_domains: 1000
-  timeout: 36000
+  timeout: 28000
   branching:
     method: sb
     input_split:
@@ -25,7 +25,8 @@ bab:
       adv_check: .inf
       sb_coeff_thresh: 0.1
       split_partitions: 20
-      input_split_logger_path: "results/log/cmars/alpha/alpha_partition20_"
+      input_split_logger_path: "results/log/cmars/alpha/alpha_partition20_iteration10_"
       if_log_repetition: True
+      if_pickle_domains: True
 attack:
   pgd_order: input_bab

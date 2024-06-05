@@ -27,6 +27,7 @@ from input_split.attack import (massive_pgd_attack, check_adv,
                                 update_rhs_with_attack)
 from input_split.branching_heuristics import input_split_branching
 from input_split.split import input_split_parallel, get_split_depth
+from input_split.pickle_domains import pickle_domains
 
 from tensorboardX import SummaryWriter
 
@@ -39,7 +40,7 @@ def batch_verification_input_split(
         stop_func=stop_criterion_batch_any, split_partitions=2,
         writer=None):
     input_split_args = arguments.Config["bab"]["branching"]["input_split"]
-
+    if_pickle_domains = input_split_args["if_pickle_domains"]
     split_start_time = time.time()
     global Visited
 
@@ -75,6 +76,10 @@ def batch_verification_input_split(
 
     # STEP 3: Compute bounds for all domains.
     bounding_start_time = time.time()
+    if if_pickle_domains:
+        alphas_prev = alphas.copy()
+        bounding_method = "alpha-crown"
+        
     ret = net.get_lower_bound_naive(
         dm_lb=dm_lb, dm_l=new_x_L, dm_u=new_x_U, alphas=alphas,
         bounding_method=bounding_method, branching_method=branching_method,
@@ -84,6 +89,19 @@ def batch_verification_input_split(
     # here alphas is a dict
     new_dm_lb, alphas, lA = ret
     bounding_time = time.time() - bounding_start_time
+
+    if if_pickle_domains:
+        bounding_method = "forward+crown"
+        new_dm_lb_plain, _, _ = net.get_lower_bound_naive(
+            dm_lb=dm_lb, dm_l=new_x_L, dm_u=new_x_U, alphas=alphas_prev,
+            bounding_method=bounding_method, branching_method=branching_method,
+            C=cs, stop_criterion_func=stop_func, thresholds=thresholds,
+            num_iter=num_iter, split_partitions=split_partitions)
+
+        pickle_time = time.time()
+        exp = writer.logdir.split("/")[-1]
+        pickle_domains(new_dm_lb, new_x_L.detach(), new_x_U.detach(), repetition, exp, new_dm_lb_plain)
+        print("pickle_time: ", time.time() - pickle_time)
 
     decision_time -= time.time()
     split_idx = input_split_branching(
