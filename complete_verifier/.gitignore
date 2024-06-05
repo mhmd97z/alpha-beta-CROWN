@@ -3,3 +3,5 @@
 *.npy
 data/
 checkpoints/
+results/
+input_split/pickled/
