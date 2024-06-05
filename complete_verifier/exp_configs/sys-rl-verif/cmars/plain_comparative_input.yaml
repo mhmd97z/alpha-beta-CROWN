@@ -25,8 +25,7 @@ bab:
       adv_check: .inf
       sb_coeff_thresh: 0.1
       split_partitions: 20
-      # writer_path: "results/log/cmars/alpha/alpha_partition20_"
-      # if_repetition: True
-      # if_split_only_copy_one: False
+      input_split_logger_path: "results/log/cmars/alpha/alpha_partition20_"
+      if_log_repetition: True
 attack:
   pgd_order: input_bab

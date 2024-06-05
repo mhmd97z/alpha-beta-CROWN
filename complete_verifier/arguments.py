@@ -642,6 +642,12 @@ class ConfigHandler:
         self.add_argument("--input_split_partitions", type=int, default=2,
                           help='How many domains to split to for each dimension at each time. By default, it is 2. In very few limited experimental cases, can change to larger numbers.',
                           hierarchy=h + ["split_partitions"])
+        self.add_argument("--input_split_logger_path", type=str, default="results/log/",
+                          help='Where to save the input splitting log.',
+                          hierarchy=h + ["input_split_logger_path"])
+        self.add_argument("--if_log_repetition", default=False,
+                          help='Whether to keep repetition count.',
+                          hierarchy=h + ["if_log_repetition"])
         self.add_argument("--sb_margin_weight", default=1.0, type=float,
                           help='Weight for the margin term in the sb heuristic.',
                           hierarchy=h + ["sb_margin_weight"])

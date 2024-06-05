@@ -46,7 +46,8 @@ class UnsortedInputDomainList(InputDomainList):
     """Unsorted domain list for input split."""
 
     def __init__(self, storage_depth, use_alpha=False,
-                 sort_index=None, sort_descending=True):
+                 sort_index=None, sort_descending=True,
+                 writer=None, if_log_repetition=False):
         super(UnsortedInputDomainList, self).__init__()
         self.lb = None
         self.dm_l = None
@@ -61,6 +62,10 @@ class UnsortedInputDomainList(InputDomainList):
         self.storage_depth = storage_depth
         self.sort_descending = sort_descending
         self.volume = self.all_volume = None
+        self.writer = writer
+        self.iter = 0
+        self.repetition = None
+        self.if_log_repetition = if_log_repetition
 
     def __len__(self):
         if self.dm_l is None:
@@ -77,7 +82,8 @@ class UnsortedInputDomainList(InputDomainList):
         )
 
     def add(self, lb, dm_l, dm_u, alpha, cs, threshold=0, split_idx=None,
-            remaining_index=None, last_split_idx=None):
+            remaining_index=None, last_split_idx=None, repetition=None,
+            copy_count=None):
         # check shape correctness
         batch = len(lb)
         if type(threshold) == int:
@@ -89,6 +95,8 @@ class UnsortedInputDomainList(InputDomainList):
         assert len(split_idx) == batch
         assert split_idx.shape[1] == self.storage_depth
         # initialize attributes using input shapes
+        if self.repetition is None and self.if_log_repetition:
+            self.repetition = TensorStorage(repetition.shape)
         if self.lb is None:
             self.lb = TensorStorage(lb.shape)
         if self.dm_l is None:
@@ -125,6 +133,12 @@ class UnsortedInputDomainList(InputDomainList):
             remaining_index = torch.where(
                 (lb.detach().cpu() <= threshold.detach().cpu()).all(1)
             )[0]
+        
+        print(f"remained {remaining_index.shape[0]} domains out of {float(dm_l.shape[0])}")
+        self.iter += 1
+        if self.writer:
+            self.writer.add_scalar('macro/prune_ratio', 1 - float(remaining_index.shape[0]) / float(dm_l.shape[0]), self.iter)
+
         # append the tensors
         self.lb.append(lb[remaining_index].type(self.lb.dtype).to(self.lb.device))
 
@@ -174,6 +188,28 @@ class UnsortedInputDomainList(InputDomainList):
                 .type(self.split_idx.dtype)
                 .to(self.split_idx.device)
             )
+        
+        if self.if_log_repetition:
+            self.repetition.append(repetition[remaining_index]
+                    .type(self.split_idx.dtype)
+                    .to(self.split_idx.device)
+                )
+            assert copy_count is not None
+            try:
+                self.writer.add_histogram('micro/newly_added_repetition', repetition[remaining_index].clone().cpu().data.numpy(), self.iter)
+                self.writer.add_scalar('macro/newly_added_count', remaining_index.shape[0], self.iter)
+                self.writer.add_scalar('macro/domain_diff', remaining_index.shape[0]-batch/copy_count, self.iter)
+            except:
+                self.writer.add_scalar('macro/newly_added_count', 0, self.iter)
+                self.writer.add_scalar('macro/domain_diff', -batch/copy_count, self.iter)
+                
+            try:
+                pruning_mask = torch.full(repetition.shape, True, dtype=torch.bool).to(repetition.device)
+                pruning_mask[remaining_index] = False
+                self.writer.add_histogram('micro/pruned_repetition', repetition[pruning_mask].clone().cpu().data.numpy(), self.iter)
+            except:
+                pass
+
 
     def pick_out_batch(self, batch, device="cuda"):
         if torch.cuda.is_available():
@@ -203,7 +239,13 @@ class UnsortedInputDomainList(InputDomainList):
         split_idx = self.split_idx.pop(batch).to(device=device, non_blocking=True)
         last_split_idx = self.last_split_idx.pop(batch).to(device=device, non_blocking=True)
         self._add_volume(dm_l, dm_u, sign=-1)
-        return alpha, lb, dm_l, dm_u, cs, threshold, split_idx, last_split_idx
+        if self.if_log_repetition:
+            repetition = self.repetition.pop(batch).to(device=device, non_blocking=True)
+            self.writer.add_histogram('micro/picked_repetition', repetition.clone().cpu().data.numpy(), self.iter)    
+        else:
+            repetition = None
+
+        return alpha, lb, dm_l, dm_u, cs, threshold, split_idx, last_split_idx, repetition
 
     def _add_volume(self, dm_l, dm_u, sign=1):
         volume = torch.prod(dm_u - dm_l, dim=-1).sum().item()
