@@ -158,3 +158,4 @@ dependencies:
     - skl2onnx==1.16.0
     - tensorboardX
     - gym
+    - ipykernel
