@@ -13,6 +13,7 @@
 ##                                                                     ##
 #########################################################################
 import torch
+import arguments
 from tensor_storage import TensorStorage
 
 
@@ -137,7 +138,15 @@ class UnsortedInputDomainList(InputDomainList):
         print(f"remained {remaining_index.shape[0]} domains out of {float(dm_l.shape[0])}")
         self.iter += 1
         if self.writer:
-            self.writer.add_scalar('macro/prune_ratio', 1 - float(remaining_index.shape[0]) / float(dm_l.shape[0]), self.iter)
+            total_prune = 1 - float(remaining_index.shape[0]) / float(dm_l.shape[0])
+            self.writer.add_scalar('macro/prune_ratio', total_prune, self.iter)
+
+            if len(arguments.Config['solver']['invprop']['apply_output_constraints_to']) > 0:
+                batch_mask = torch.any(lb == float('inf'), dim=1)
+                invprop_direct_prune_ratio = (batch_mask.to(torch.int32).sum() / batch_mask.shape[0]).data
+                
+                self.writer.add_scalar('macro/invprop_direct_prune_ratio', invprop_direct_prune_ratio, self.iter)
+                self.writer.add_scalar('macro/invprop_prune_surplus', total_prune - invprop_direct_prune_ratio, self.iter)
 
         # append the tensors
         self.lb.append(lb[remaining_index].type(self.lb.dtype).to(self.lb.device))

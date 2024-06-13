@@ -71,9 +71,7 @@ def batch_verification_input_split(
 
     decision_time = time.time() - decision_start_time
 
-    if writer:
-        writer.add_scalar('macro/split_depth', split_depth, d.iter)
-
+    print("Batch size: ", new_x_L.shape[0])
     # STEP 3: Compute bounds for all domains.
     bounding_start_time = time.time()
     if if_pickle_domains:
@@ -85,6 +83,10 @@ def batch_verification_input_split(
         bounding_method=bounding_method, branching_method=branching_method,
         C=cs, stop_criterion_func=stop_func, thresholds=thresholds,
         num_iter=num_iter, split_partitions=split_partitions)
+
+    if writer:
+        writer.add_scalar('macro/split_depth', split_depth, d.iter)
+        writer.add_scalar('macro/batch', new_x_L.shape[0], d.iter)
 
     # here alphas is a dict
     new_dm_lb, alphas, lA = ret
@@ -326,12 +328,10 @@ def input_bab_parallel(net, init_domain, x, rhs=None,
         if writer:
             writer.add_scalar('macro/domain_count', len(domains), domains.iter)
             writer.add_scalar('macro/split_partitions', split_partitions, domains.iter)
-            writer.add_scalar('macro/batch', batch_, domains.iter)
             
             if if_log_repetition:
                 writer.add_histogram('micro/repetition', domains.repetition._storage[:len(domains)].clone().cpu().data.numpy(), domains.iter)
             
-        print('Batch size:', batch_)
         try:
             global_lb = batch_verification_input_split(
                 domains, net, batch_,

@@ -282,6 +282,10 @@ class ABCROWN:
 
         self.domain = torch.stack([data_lb.squeeze(0), data_ub.squeeze(0)], dim=-1)
         if arguments.Config['bab']['branching']['input_split']['enable']:
+            if len(arguments.Config['solver']['invprop']['apply_output_constraints_to']) > 0:
+                assert arguments.Config['general']['enable_incomplete_verification']
+                self.model.net.constraints = model_incomplete.net.constraints
+                self.model.net.thresholds = model_incomplete.net.thresholds            
             result = input_bab_parallel(
                 self.model, self.domain, x, rhs=rhs,
                 timeout=timeout, max_iterations=max_iterations,
@@ -483,7 +487,7 @@ class ABCROWN:
                     data_ub=data_max, data_lb=data_min, c=c, data_dict=data_dict,
                     cplex_processes=cplex_processes,
                     rhs=rhs, timeout=timeout, attack_images=this_spec_attack_images,
-                    vnnlib=vnnlib, model=model_ori)
+                    vnnlib=vnnlib, model=model_ori, model_incomplete=model_incomplete)
                 bab_ret.append([index, l, nodes, time.time() - start_time_bab, pidx])
 
             # terminate the corresponding cut inquiry process if exists
