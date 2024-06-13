@@ -13,6 +13,8 @@ solver:
     lr_alpha: 0.1
     lr_decay: 0.98  # exponential decay.
     iteration: 20  # If large, need to make sure decay is not too small.
+  invprop:
+    apply_output_constraints_to: ["/input.32"]
   beta-crown:
     lr_alpha: 0.01
     lr_beta: 0.1

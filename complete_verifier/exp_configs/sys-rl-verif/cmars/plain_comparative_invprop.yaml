@@ -1,8 +1,10 @@
+general:
+  enable_incomplete_verification: True
 model:
   name: cmars
   input_shape: [1, 1, 38]
 specification:
-  vnnlib_path: /home/mzi/sys-rl-verif/applications/cmars/vnnlib/plain_comparative/total_range/in19_eps001_out15_0_14.vnnlib
+  vnnlib_path: /home/mzi/sys-rl-verif/applications/cmars/vnnlib/plain_comparative/partial_range/in19_lower04_upper06_eps001_out15_0_14.vnnlib
 attack:
   pgd_order: skip
 bab:
@@ -15,9 +17,12 @@ bab:
       adv_check: .inf
       sb_coeff_thresh: 0.1
       split_partitions: 10
-      writer_path: "results/log/init10_invprop"
+      input_split_logger_path: "results/log/cmars/invprop/"
+      if_log_repetition: True
+      if_pickle_domains: False
 solver:
-  batch_size: 128
+  batch_size: 2048
+  auto_enlarge_batch_size: true
   alpha-crown:
     share_alphas: true
     full_conv_alpha: false
@@ -30,4 +35,4 @@ solver:
     lr_decay: 0.98
     iteration: 10
   invprop:
-    apply_output_constraints_to: ["/input.12"]
+    apply_output_constraints_to: ["/input.12"] # 1, 4, 8, 12
