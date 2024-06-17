@@ -6,7 +6,7 @@ import torch.nn as nn
 def get_model(size="small"):
     assert size in ["small", "mid", "big"]
     
-    path_to_onnx_model = f"/home/mzi/sys-rl-verif/VNNComp23_NN4Sys/onnx/pensieve_{size}_simple.onnx"
+    path_to_onnx_model = f"/home/mzi/sys-rl-verif/applications/pensieve/model/onnx/pensieve_{size}_simple.onnx"
     onnx_model = onnx.load(path_to_onnx_model)
     pytorch_model = ConvertModel(onnx_model)
 
