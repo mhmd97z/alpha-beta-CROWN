@@ -159,3 +159,4 @@ dependencies:
     - tensorboardX
     - gym
     - ipykernel
+    - tensorboard
