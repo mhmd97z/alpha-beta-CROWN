@@ -260,7 +260,7 @@ def input_bab_parallel(net, init_domain, x, rhs=None,
         writer = None
 
     if if_log_repetition:
-        initial_repetition = torch.ones((1, 1)).to(rhs)
+        initial_repetition = torch.zeros((1, 1)).to(rhs)
     else:
         initial_repetition = None
 

@@ -76,7 +76,7 @@ def input_split_parallel(x_L, x_U, shape=None,
 
     if repetition is not None:
         repetition = repetition.repeat(split_partitions ** split_depth, 1)
-        repetition += 1
+        repetition += split_depth
 
     return new_x_L, new_x_U, cs, thresholds, split_depth, split_idx, repetition
 
