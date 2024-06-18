@@ -261,6 +261,9 @@ class ConfigHandler:
         self.add_argument('--min_batch_size_ratio', type=float, default=0.1,
                           help='The minimum batch size ratio in each iteration (splitting multiple layers if the number of domains is smaller than min_batch_size_ratio * batch_size).',
                           hierarchy=h + ["min_batch_size_ratio"])
+        self.add_argument('--base_split_depth', type=int, default=1,
+                          help='The base value of split depth.',
+                          hierarchy=h + ["base_split_depth"])
         self.add_argument("--use_float64_in_last_iteration", action='store_true',
                           help='Use double fp (float64) at the last iteration in alpha/beta CROWN.',
                           hierarchy=h + ["use_float64_in_last_iteration"])

@@ -82,7 +82,8 @@ def input_split_parallel(x_L, x_U, shape=None,
 
 
 def get_split_depth(x_L, split_partitions=2):
-    split_depth = 1
+    base_split_depth = arguments.Config["solver"]["base_split_depth"]
+    split_depth = base_split_depth
     min_batch_size_ratio = arguments.Config["solver"]["min_batch_size_ratio"]
     batch_size = arguments.Config["solver"]["batch_size"]
     if len(x_L) < min_batch_size_ratio * batch_size:
