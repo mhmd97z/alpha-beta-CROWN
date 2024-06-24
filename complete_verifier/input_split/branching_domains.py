@@ -142,7 +142,7 @@ class UnsortedInputDomainList(InputDomainList):
             self.writer.add_scalar('macro/prune_ratio', total_prune, self.iter)
 
             if len(arguments.Config['solver']['invprop']['apply_output_constraints_to']) > 0:
-                batch_mask = torch.any(lb == float('inf'), dim=1)
+                batch_mask = torch.any(lb == 10000000.0, dim=1)
                 invprop_direct_prune_ratio = (batch_mask.to(torch.int32).sum() / batch_mask.shape[0]).data
                 
                 self.writer.add_scalar('macro/invprop_direct_prune_ratio', invprop_direct_prune_ratio, self.iter)
