@@ -50,6 +50,13 @@ def batch_verification_input_split(
     alphas, dm_lb, x_L, x_U, cs, thresholds, split_idx, last_split_idx, repetition = ret
     pickout_time = time.time() - pickout_start_time
 
+    if repetition is not None:
+        print("repetition avg: ", repetition.mean())
+        if writer:
+            writer.add_scalar('macro/repetition_avg', repetition.mean(), d.iter)
+            writer.add_scalar('macro/repetition_min', repetition.min(), d.iter)
+            writer.add_scalar('macro/repetition_max', repetition.max(), d.iter)
+
     if input_split_args['update_rhs_with_attack']:
         thresholds = update_rhs_with_attack(x_L, x_U, cs, thresholds, dm_lb,
                                             net.model_ori)
@@ -89,7 +96,7 @@ def batch_verification_input_split(
         writer.add_scalar('macro/batch', new_x_L.shape[0], d.iter)
 
     # here alphas is a dict
-    new_dm_lb, alphas, lA = ret
+    new_dm_lb, alphas, lA, new_dm_ub = ret
     bounding_time = time.time() - bounding_start_time
 
     if if_pickle_domains:
@@ -115,6 +122,10 @@ def batch_verification_input_split(
 
     if writer:
         writer.add_histogram('micro/split_idx', split_idx.clone().cpu().data.numpy(), d.iter)
+        if new_dm_ub is not None:
+            writer.add_histogram('micro/min_ub_domain', new_dm_ub.min(dim=1, keepdim=True).values.clone().cpu().data.numpy(), d.iter)
+            writer.add_histogram('micro/max_ub_domain', new_dm_ub.max(dim=1, keepdim=True).values.clone().cpu().data.numpy(), d.iter)
+            writer.add_scalar('macro/max_ub_batch', new_dm_ub.max(), d.iter)
 
     copy_count = split_partitions ** split_depth
     # STEP 4: Add new domains back to domain list.
