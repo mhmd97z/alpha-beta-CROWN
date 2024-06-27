@@ -83,11 +83,12 @@ def get_lower_bound_naive(
             with torch.no_grad():
                 ret = self.net.compute_bounds(
                     x=(new_x,), C=C, method=bounding_method,
-                    bound_upper=False, return_A=return_A, needed_A_dict=needed_A_dict,
+                    bound_upper=upper_bound, return_A=return_A, needed_A_dict=needed_A_dict,
                     reuse_alpha=bounding_method.lower() == 'crown' and len(alphas) > 0,
                     reference_bounds=reference_interm_bounds
                 )
                 lb = ret[0]
+                ub = ret[1]
                 lA = _get_lA(ret)
 
         if dm_lb is not None:
