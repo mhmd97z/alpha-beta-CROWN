@@ -58,6 +58,7 @@ class LiRPANet:
                 'sparse_features_alpha': general_args['sparse_alpha'],
                 'sparse_spec_alpha': general_args['sparse_alpha'],
                 'sparse_intermediate_bounds': general_args['sparse_interm'],
+                'sparse_intermediate_bounds_with_ibp': general_args['sparse_intermediate_bounds_with_ibp'],
                 'crown_batch_size': solver_args['crown']['batch_size'],
                 'max_crown_size': solver_args['crown']['max_crown_size'],
                 'forward_refinement': solver_args['forward']['refine'],

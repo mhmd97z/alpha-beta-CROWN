@@ -83,7 +83,10 @@ class ConfigHandler:
                           hierarchy=h + ["sparse_alpha"])
         self.add_argument("--no_sparse_interm", action='store_false',
                           help='Enable/disable sparse intermediate bounds.',
-                          hierarchy=h + ["sparse_interm"])
+                          hierarchy=h + ["sparse_interm"]),
+        self.add_argument("--sparse_intermediate_bounds_with_ibp", default=True,
+                          help='Whether sparse intermediate bounds with ibp.',
+                          hierarchy=h + ["sparse_intermediate_bounds_with_ibp"]),
         self.add_argument("--save_adv_example", action='store_true',
                           help='Save returned adversarial example in file.',
                           hierarchy=h + ["save_adv_example"])
