@@ -204,18 +204,20 @@ class UnsortedInputDomainList(InputDomainList):
                     .to(self.split_idx.device)
                 )
             assert copy_count is not None
-            try:
-                self.writer.add_histogram('micro/newly_added_repetition', repetition[remaining_index].clone().cpu().data.numpy(), self.iter)
-                self.writer.add_scalar('macro/newly_added_count', remaining_index.shape[0], self.iter)
-                self.writer.add_scalar('macro/domain_diff', remaining_index.shape[0]-batch/copy_count, self.iter)
-            except:
-                self.writer.add_scalar('macro/newly_added_count', 0, self.iter)
-                self.writer.add_scalar('macro/domain_diff', -batch/copy_count, self.iter)
+            if self.writer:
+                try:
+                    self.writer.add_histogram('micro/newly_added_repetition', repetition[remaining_index].clone().cpu().data.numpy(), self.iter)
+                    self.writer.add_scalar('macro/newly_added_count', remaining_index.shape[0], self.iter)
+                    self.writer.add_scalar('macro/domain_diff', remaining_index.shape[0]-batch/copy_count, self.iter)
+                except:
+                    self.writer.add_scalar('macro/newly_added_count', 0, self.iter)
+                    self.writer.add_scalar('macro/domain_diff', -batch/copy_count, self.iter)
                 
             try:
                 pruning_mask = torch.full(repetition.shape, True, dtype=torch.bool).to(repetition.device)
                 pruning_mask[remaining_index] = False
-                self.writer.add_histogram('micro/pruned_repetition', repetition[pruning_mask].clone().cpu().data.numpy(), self.iter)
+                if self.writer:
+                    self.writer.add_histogram('micro/pruned_repetition', repetition[pruning_mask].clone().cpu().data.numpy(), self.iter)
             except:
                 pass
 
@@ -250,7 +252,8 @@ class UnsortedInputDomainList(InputDomainList):
         self._add_volume(dm_l, dm_u, sign=-1)
         if self.if_log_repetition:
             repetition = self.repetition.pop(batch).to(device=device, non_blocking=True)
-            self.writer.add_histogram('micro/picked_repetition', repetition.clone().cpu().data.numpy(), self.iter)    
+            if self.writer:
+                self.writer.add_histogram('micro/picked_repetition', repetition.clone().cpu().data.numpy(), self.iter)    
         else:
             repetition = None
 

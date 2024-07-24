@@ -204,7 +204,6 @@ def input_bab_parallel(net, init_domain, x, rhs=None,
     catch_assertion = input_split_args['catch_assertion']
     if_log_repetition = input_split_args['if_log_repetition']
     input_split_logger_path = input_split_args['input_split_logger_path']
-    prop = arguments.Config["specification"]["vnnlib_path"].split("/")[-1].split(".")[0]
 
     if net.device != 'cpu' and auto_enlarge_batch_size:
         total_vram = torch.cuda.get_device_properties(net.device).total_memory
@@ -265,7 +264,10 @@ def input_bab_parallel(net, init_domain, x, rhs=None,
     max_depth = max(int(math.log(max(min_batch_size, 1)) // math.log(split_partitions)), 1)
     storage_depth = min(max_depth, dm_l.shape[-1])
 
-    if input_split_logger_path:
+    print("input_split_logger_path: ", input_split_logger_path)
+    print("input_split_logger_path: ", type(input_split_logger_path))
+    if input_split_logger_path is not None:
+        prop = arguments.Config["specification"]["vnnlib_path"].split("/")[-1].split(".")[0]
         writer = SummaryWriter(input_split_logger_path + prop)
     else:
         writer = None

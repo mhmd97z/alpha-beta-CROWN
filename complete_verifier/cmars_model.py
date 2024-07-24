@@ -51,12 +51,16 @@ class R_Actor(nn.Module):
 
         return action_ligits_probs
 
-def get_model():
+def get_model(layer_count, hidden_size, action_count):
     # set configs
-    all_args.layer_N = 1
-    all_args.hidden_size = 32
-    n_prbs = 15
-    models_path = "cmars_lib/cmars_base.pt"
+    assert layer_count in [1, 2, 3, 4, 5, 6, 7, 8]
+    assert hidden_size in [32, 64, 128]
+    assert action_count in [15, 30, 80, 140]
+
+    all_args.layer_N = layer_count
+    all_args.hidden_size = hidden_size
+    n_prbs = action_count
+    models_path = f"../../applications/cmars/models/output_{action_count}/h{hidden_size}/N{layer_count}/actor_type_embb.pt"
 
     act_space = spaces.Discrete(n_prbs)
     obs_space = spaces.Box(low=0, high=10e6, shape=(mdp_config.EMBB_LOCAL_OBS_VAR_COUNT+mdp_config.AUG_LOCAL_STATE_VAR_COUNT,))
@@ -114,7 +118,7 @@ def get_params_argmax(input_size):
 
     return c01, c02
 
-def get_plain_comparative_cmars():
+def get_plain_comparative_cmars(layer_count=1, hidden_size=32, action_count=15):
     class MyModel(nn.ModuleList):
         def __init__(self, device=torch.device("cpu")):
             super(MyModel, self).__init__()
@@ -128,7 +132,7 @@ def get_plain_comparative_cmars():
             #################
             # Model
             ################# 
-            self.base_model = get_model()
+            self.base_model = get_model(layer_count, hidden_size, action_count)
             
             #################
             # Input summation

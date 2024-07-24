@@ -1708,9 +1708,9 @@ class Step_carvana(nn.Module):
 
         return x
 
-def cmars() -> nn.Sequential:
+def cmars(layer_count=1, hidden_size=32, action_count=15) -> nn.Sequential:
     from cmars_model import get_plain_comparative_cmars    
-    return get_plain_comparative_cmars()
+    return get_plain_comparative_cmars(layer_count=layer_count, hidden_size=hidden_size, action_count=action_count)
 
 
 def pensieve() -> nn.Sequential:

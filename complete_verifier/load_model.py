@@ -267,7 +267,10 @@ def load_model(weights_loaded=True):
     if arguments.Config['model']['name'] is not None:
         # You can customize this function to load your own model based on model name.
         try:
-            model_ori = eval(arguments.Config['model']['name'])()  # pylint: disable=eval-used
+            if "(" in arguments.Config['model']['name']:
+                model_ori = eval(arguments.Config['model']['name'])  # pylint: disable=eval-used
+            else:
+                model_ori = eval(arguments.Config['model']['name'])()
         except Exception:  # pylint: disable=broad-except
             print(f'Cannot load pytorch model definition "{arguments.Config["model"]["name"]}()". '
                   f'"{arguments.Config["model"]["name"]}()" must be a callable that returns a torch.nn.Module object.')
