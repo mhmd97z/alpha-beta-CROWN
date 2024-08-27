@@ -127,6 +127,9 @@ def batch_verification_input_split(
             writer.add_histogram('micro/max_ub_domain', new_dm_ub.max(dim=1, keepdim=True).values.clone().cpu().data.numpy(), d.iter)
             writer.add_scalar('macro/max_ub_batch', new_dm_ub.max(), d.iter)
 
+    if new_dm_ub is not None:
+        print("max_ub_batch: ", new_dm_ub.max())
+        
     copy_count = split_partitions ** split_depth
     # STEP 4: Add new domains back to domain list.
     adddomain_start_time = time.time()

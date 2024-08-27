@@ -1716,3 +1716,11 @@ def cmars(layer_count=1, hidden_size=32, action_count=15) -> nn.Sequential:
 def pensieve() -> nn.Sequential:
     from pensieve_model import get_plain_comparative_pensieve
     return get_plain_comparative_pensieve()
+
+def firm() -> nn.Sequential:
+    from firm_model import get_plain_comparative_firm
+    return get_plain_comparative_firm()
+    
+def aurora(if_difference=False) -> nn.Sequential:
+    from aurora_model import get_plain_comparative_aurora
+    return get_plain_comparative_aurora(if_difference=if_difference)

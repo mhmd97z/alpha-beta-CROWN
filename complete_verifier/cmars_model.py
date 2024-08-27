@@ -85,12 +85,14 @@ def get_model(layer_count, hidden_size, action_count):
 
             for iter, item in enumerate(self.midlayers):
                 item.weight.data = model.base.mlp.fc2[iter][0].weight.data
+                item.bias.data = model.base.mlp.fc2[iter][0].bias.data
 
             for i in range(all_args.layer_N):
                 setattr(self, "lin{}".format(i+2), self.midlayers[i])
 
             self.out = nn.Linear(all_args.hidden_size, n_prbs)
             self.out.weight.data = model.act.action_out.linear.weight.data
+            self.out.bias.data = model.act.action_out.linear.bias.data
 
         def forward(self, obs):
             obs = self.af(self.lin1(obs))
