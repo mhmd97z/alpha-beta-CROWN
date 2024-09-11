@@ -1713,9 +1713,9 @@ def cmars(layer_count=1, hidden_size=32, action_count=15) -> nn.Sequential:
     return get_plain_comparative_cmars(layer_count=layer_count, hidden_size=hidden_size, action_count=action_count)
 
 
-def pensieve() -> nn.Sequential:
+def pensieve(size="small") -> nn.Sequential:
     from pensieve_model import get_plain_comparative_pensieve
-    return get_plain_comparative_pensieve()
+    return get_plain_comparative_pensieve(size)
 
 def firm() -> nn.Sequential:
     from firm_model import get_plain_comparative_firm

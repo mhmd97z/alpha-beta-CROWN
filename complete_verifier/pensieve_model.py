@@ -4,9 +4,12 @@ import torch
 import torch.nn as nn
 
 def get_model(size="small"):
-    assert size in ["small", "mid", "big"]
+    assert size in ["small", "mid", "big", "original"]
     
-    path_to_onnx_model = f"/home/mzi/sys-rl-verif/applications/pensieve/model/onnx/pensieve_{size}_simple.onnx"
+    if size == "original":
+        path_to_onnx_model = f"/home/mzi/sys-rl-verif/applications/pensieve/model/onnx/model_pensieve_ppo.onnx"
+    else:
+        path_to_onnx_model = f"/home/mzi/sys-rl-verif/applications/pensieve/model/onnx/pensieve_{size}_simple.onnx"
     onnx_model = onnx.load(path_to_onnx_model)
     pytorch_model = ConvertModel(onnx_model)
 
@@ -24,8 +27,8 @@ def get_params_argmax(input_size):
 
     return c01, c02
 
-def get_plain_comparative_pensieve() -> nn.Sequential:
-    base_model = get_model()
+def get_plain_comparative_pensieve(size) -> nn.Sequential:
+    base_model = get_model(size)
 
     class MyModel(nn.ModuleList):
         def __init__(self, device=torch.device("cpu")):
