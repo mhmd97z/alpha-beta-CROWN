@@ -2,17 +2,25 @@ from onnx2pytorch import ConvertModel
 import onnx 
 import torch 
 import torch.nn as nn
+import pensieve_lib.ppo2 as network
 
 def get_model(size="small"):
     assert size in ["small", "mid", "big", "original"]
     
     if size == "original":
-        path_to_onnx_model = f"/home/mzi/sys-rl-verif/applications/pensieve/model/onnx/model_pensieve_ppo.onnx"
-    else:
-        path_to_onnx_model = f"/home/mzi/sys-rl-verif/applications/pensieve/model/onnx/pensieve_{size}_simple.onnx"
-    onnx_model = onnx.load(path_to_onnx_model)
-    pytorch_model = ConvertModel(onnx_model)
+        S_INFO = 6
+        S_LEN = 8
+        A_DIM = 6
+        model_path = "pensieve_lib/pretrain/nn_model_ep_155400.pth"
+        actor = network.Network(state_dim=[S_INFO, S_LEN], action_dim=A_DIM)
+        actor.load_model(model_path)
+        pytorch_model = actor.actor
 
+    else:
+        path_to_onnx_model = f"../../applications/pensieve/model/onnx/pensieve_{size}_simple.onnx"
+        onnx_model = onnx.load(path_to_onnx_model)
+        pytorch_model = ConvertModel(onnx_model)
+        
     return pytorch_model
 
 def get_params_argmax(input_size):
@@ -58,8 +66,8 @@ def get_plain_comparative_pensieve(size) -> nn.Sequential:
 
         def forward(self, obs):
             # input processing
-            input1 = self.input_conv1(obs)
-            input2 = self.input_conv2(obs)
+            input1 = self.input_conv1(obs).reshape((-1, 6, 8))
+            input2 = self.input_conv2(obs).reshape((-1, 6, 8))
             
             # the model
             copy1_logits = self.base_model(input1)
