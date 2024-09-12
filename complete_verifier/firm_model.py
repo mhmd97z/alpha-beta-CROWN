@@ -32,8 +32,7 @@ def get_model():
 
             return output
 
-
-    env = SimEnvironment("firm_lib/data/readfile_sleep_imageresize_output.csv")
+    env = SimEnvironment("../../applications/firm/firm_lib/data/readfile_sleep_imageresize_output.csv")
     function_name = env.get_function_name()
     initial_state = env.reset(function_name)
     folder_path = "../../applications/firm/lib/model/" + str(function_name)
@@ -41,24 +40,12 @@ def get_model():
     agent.load_checkpoint("../../applications/firm/model/ppo.pth.tar")
     return ActorNetworkWrapper(base_model=agent.actor)
 
-def get_params_argmax(input_size):
-    # Take sum of the input vars
-    c01 = torch.zeros([1, 1, input_size+1])
-    c01[0][0][0] = 1
-
-    c02 = torch.zeros([1, 1, input_size+1])
-    c02[0][0][0] = 1
-    c02[0][0][-1] = 1
-
-    return c01, c02
-
 def get_plain_comparative_firm():
     class MyModel(nn.ModuleList):
         def __init__(self, device=torch.device("cpu")):
             super(MyModel, self).__init__()
 
             self.input_size = NUM_STATES
-            c01, c02 = get_params_argmax(self.input_size)
             self.ft = torch.nn.Flatten()
             
             #################
@@ -66,21 +53,12 @@ def get_plain_comparative_firm():
             ################# 
             self.base_model = get_model()
             
-            #################
-            # Input summation
-            #################
-            self.input_conv1 = nn.Conv1d(in_channels=1, out_channels=1, kernel_size=self.input_size+1)
-            self.input_conv1.weight = torch.nn.Parameter(c01, requires_grad=True)
-            self.input_conv1.bias = torch.nn.Parameter(torch.zeros_like(self.input_conv1.bias, requires_grad=True))
-            
-            self.input_conv2 = nn.Conv1d(in_channels=1, out_channels=1, kernel_size=self.input_size+1)
-            self.input_conv2.weight = torch.nn.Parameter(c02, requires_grad=True)
-            self.input_conv2.bias = torch.nn.Parameter(torch.zeros_like(self.input_conv2.bias, requires_grad=True))
             
         def forward(self, obs):
             # input processing
-            input1 = self.input_conv1(obs)
-            input2 = self.input_conv2(obs)
+            input1 = obs[:, :, :self.input_size]
+            input2 = input1 + obs[:, :, self.input_size:2*self.input_size]
+
             # the model
             copy1_logits = self.base_model(input1)
             copy2_logits = self.base_model(input2)
