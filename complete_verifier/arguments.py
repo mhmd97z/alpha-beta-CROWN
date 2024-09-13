@@ -252,6 +252,10 @@ class ConfigHandler:
         self.add_argument("--rhs_offset", type=float, default=None,
                           help='Adding an offset to RHS.',
                           hierarchy=h + ['rhs_offset'])
+        self.add_argument("--conjunctive_output_constraints", action='store_true',
+                          help='Conjunction in the output constraints.',
+                          hierarchy=h + ["conjunctive_output_constraints"])
+        
 
         h = ["solver"]
         self.add_argument("--batch_size", type=int, default=64,

@@ -80,26 +80,46 @@ def mip(model, ret_incomplete, labels_to_verify=None, mip_skip_unsafe=False):
         print(f'MIP solved lower bound: {mip_global_lb}')
         print(f'MIP solved upper bound: {mip_global_ub}')
         ret['global_lb'] = mip_global_lb
-        verified_status = "safe-mip"
         # Batch size is always 1.
         labels_to_check = labels_to_verify if labels_to_verify is not None else range(len(mip_status))
-        for pidx in labels_to_check:
-            if mip_global_lb[pidx] >= 0:
-                # Lower bound > 0, verified.
-                continue
-            # Lower bound < 0, now check upper bound.
-            if mip_global_ub[pidx] <= 0:
-                # Must be 2 cases: solved with adv example, or early terminate with adv example.
-                assert mip_status[pidx] in [2, 15]
-                if mip_skip_unsafe:
-                    return "unknown-mip", ret
-                else:
-                    print("verified unsafe-mip with init mip!")
-                    return "unsafe-mip", ret
-            # Lower bound < 0 and upper bound > 0, must be a timeout.
-            assert mip_status[pidx] == 9 or mip_status[pidx] == -1, "should only be timeout for label pidx"
-            verified_status = "unknown-mip"
+        if arguments.Config["specification"]["conjunctive_output_constraints"]:
+            verified_status = "unsafe-mip"
+            for pidx in labels_to_check:
+                if mip_global_ub[pidx] <= 0:
+                    # Upper bound < 0, verified.
+                    continue
+                # Lower bound > 0
+                if mip_global_lb[pidx] >= 0:
+                    # Must be 2 cases: solved with adv example, or early terminate with adv example.
+                    assert mip_status[pidx] in [2, 15]
+                    # if mip_skip_unsafe:
+                    #     return "unknown-mip", ret
+                    # else:
+                    #     print("verified unsafe-mip with init mip!")
+                    return "safe-mip", ret
+                # Lower bound < 0 and upper bound > 0, must be a timeout.
+                assert mip_status[pidx] == 9 or mip_status[pidx] == -1, "should only be timeout for label pidx"
+                verified_status = "unknown-mip"
+        else:
+            verified_status = "safe-mip"
+            for pidx in labels_to_check:
+                if mip_global_lb[pidx] >= 0:
+                    # Lower bound > 0, verified.
+                    continue
+                # Lower bound < 0, now check upper bound.
+                if mip_global_ub[pidx] <= 0:
+                    # Must be 2 cases: solved with adv example, or early terminate with adv example.
+                    assert mip_status[pidx] in [2, 15]
+                    if mip_skip_unsafe:
+                        return "unknown-mip", ret
+                    else:
+                        print("verified unsafe-mip with init mip!")
+                        return "unsafe-mip", ret
+                # Lower bound < 0 and upper bound > 0, must be a timeout.
+                assert mip_status[pidx] == 9 or mip_status[pidx] == -1, "should only be timeout for label pidx"
+                verified_status = "unknown-mip"
         print(f"verified {verified_status} with init mip!")
+
         return verified_status, ret
     elif arguments.Config["general"]["complete_verifier"] == "bab-refine":
         print("Start solving intermediate bounds with MIP...")
@@ -619,6 +639,9 @@ def build_solver_model(
     m.net.solver_model.update()
     build_mip_time = time.time() - build_mip_start_time
     print(f"{model_type} solver model built in {build_mip_time:.4f} seconds.")
+    print("model saved in model_details.lp")
+    m.net.solver_model.write("model_details.lp")
+
     return out_vars
 
 
@@ -1028,7 +1051,6 @@ def build_the_model_mip(m, labels_to_verify=None, save_mps=False, process_dict=N
         to support async sharing with the main thread
     Output: gurobi mip model solving lb and status
     """
-
     def gen_timestamp():
         return str(int(time.time() * 100.0) % 100000000)
 
@@ -1176,6 +1198,8 @@ def build_the_model_mip(m, labels_to_verify=None, save_mps=False, process_dict=N
     lb, ub = torch.tensor(lb), torch.tensor(ub)
     if save_adv and adv_new is not None:
         mip_adv = np.array(adv_new).reshape(input_shape).tolist()
+    print("mip_adv: ", mip_adv)
+    
     return lb, ub, status
 
 def run_get_cuts_subprocess(model_filename):
