@@ -78,7 +78,9 @@ def get_model(layer_count, hidden_size, action_count):
 
             self.af = nn.ReLU()
             self.lin1 = nn.Linear(mdp_config.AUG_LOCAL_STATE_VAR_COUNT + mdp_config.EMBB_LOCAL_OBS_VAR_COUNT, all_args.hidden_size)
-            
+            self.lin1.weight.data = model.base.mlp.fc1[0].weight.data
+            self.lin1.bias.data = model.base.mlp.fc1[0].bias.data
+
             self.midlayers = []
             for i in range(all_args.layer_N):
                 self.midlayers.append(nn.Linear(all_args.hidden_size, all_args.hidden_size))
