@@ -669,7 +669,7 @@ class ABCROWN:
                 verified_status, ret_mip = mip(
                     model_incomplete, ret, mip_skip_unsafe=mip_skip_unsafe)
                 verified_success = verified_status != 'unknown'
-                ret.update(ret_mip)
+                # ret.update(ret_mip)
 
             # extract the process pool for cut inquiry
             if bab_args['cut']['enabled'] and bab_args['cut']['cplex_cuts']:

@@ -71,8 +71,12 @@ def mip(model, ret_incomplete, labels_to_verify=None, mip_skip_unsafe=False):
         'global_lb', 'lower_bounds', 'upper_bounds', 'refined_betas']}
 
     if arguments.Config["general"]["complete_verifier"] == "mip":
+        if arguments.Config["specification"]["conjunctive_output_constraints"]:
+            _, _, mip_status = model.build_the_model_mip()
+            return mip_status, _
+
         mip_global_lb, mip_global_ub, mip_status = model.build_the_model_mip(
-            labels_to_verify=labels_to_verify, save_adv=True, mip_skip_unsafe=mip_skip_unsafe)
+        labels_to_verify=labels_to_verify, save_adv=True, mip_skip_unsafe=mip_skip_unsafe)
         if mip_global_lb.ndim == 1:
             mip_global_lb = mip_global_lb.unsqueeze(-1)  # Missing batch dimension.
         if mip_global_ub.ndim == 1:
@@ -82,45 +86,27 @@ def mip(model, ret_incomplete, labels_to_verify=None, mip_skip_unsafe=False):
         ret['global_lb'] = mip_global_lb
         # Batch size is always 1.
         labels_to_check = labels_to_verify if labels_to_verify is not None else range(len(mip_status))
-        if arguments.Config["specification"]["conjunctive_output_constraints"]:
-            verified_status = "unsafe-mip"
-            for pidx in labels_to_check:
-                if mip_global_ub[pidx] <= 0:
-                    # Upper bound < 0, verified.
-                    continue
-                # Lower bound > 0
-                if mip_global_lb[pidx] >= 0:
-                    # Must be 2 cases: solved with adv example, or early terminate with adv example.
-                    assert mip_status[pidx] in [2, 15]
-                    # if mip_skip_unsafe:
-                    #     return "unknown-mip", ret
-                    # else:
-                    #     print("verified unsafe-mip with init mip!")
-                    return "safe-mip", ret
-                # Lower bound < 0 and upper bound > 0, must be a timeout.
-                assert mip_status[pidx] == 9 or mip_status[pidx] == -1, "should only be timeout for label pidx"
-                verified_status = "unknown-mip"
-        else:
-            verified_status = "safe-mip"
-            for pidx in labels_to_check:
-                if mip_global_lb[pidx] >= 0:
-                    # Lower bound > 0, verified.
-                    continue
-                # Lower bound < 0, now check upper bound.
-                if mip_global_ub[pidx] <= 0:
-                    # Must be 2 cases: solved with adv example, or early terminate with adv example.
-                    assert mip_status[pidx] in [2, 15]
-                    if mip_skip_unsafe:
-                        return "unknown-mip", ret
-                    else:
-                        print("verified unsafe-mip with init mip!")
-                        return "unsafe-mip", ret
-                # Lower bound < 0 and upper bound > 0, must be a timeout.
-                assert mip_status[pidx] == 9 or mip_status[pidx] == -1, "should only be timeout for label pidx"
-                verified_status = "unknown-mip"
+        verified_status = "safe-mip"
+        for pidx in labels_to_check:
+            if mip_global_lb[pidx] >= 0:
+                # Lower bound > 0, verified.
+                continue
+            # Lower bound < 0, now check upper bound.
+            if mip_global_ub[pidx] <= 0:
+                # Must be 2 cases: solved with adv example, or early terminate with adv example.
+                assert mip_status[pidx] in [2, 15]
+                if mip_skip_unsafe:
+                    return "unknown-mip", ret
+                else:
+                    print("verified unsafe-mip with init mip!")
+                    return "unsafe-mip", ret
+            # Lower bound < 0 and upper bound > 0, must be a timeout.
+            assert mip_status[pidx] == 9 or mip_status[pidx] == -1, "should only be timeout for label pidx"
+            verified_status = "unknown-mip"
         print(f"verified {verified_status} with init mip!")
 
         return verified_status, ret
+
     elif arguments.Config["general"]["complete_verifier"] == "bab-refine":
         print("Start solving intermediate bounds with MIP...")
         refined_lower_bounds, refined_upper_bounds, refined_betas = model.build_the_model_mip_refine(
@@ -639,9 +625,6 @@ def build_solver_model(
     m.net.solver_model.update()
     build_mip_time = time.time() - build_mip_start_time
     print(f"{model_type} solver model built in {build_mip_time:.4f} seconds.")
-    print("model saved in model_details.lp")
-    m.net.solver_model.write("model_details.lp")
-
     return out_vars
 
 
@@ -1064,6 +1047,42 @@ def build_the_model_mip(m, labels_to_verify=None, save_mps=False, process_dict=N
                     mip_threads=mip_threads, model_type="mip", x=x, intermediate_bounds=intermediate_bounds)
 
     out_vars = m.net[m.net.final_name].solver_vars
+
+    if arguments.Config["specification"]["conjunctive_output_constraints"]:
+        # adding output constraints
+        for iii, c in enumerate(m.c[0]):
+            non_zero = c.nonzero().flatten().tolist()
+            lin_expr = grb.LinExpr(c.tolist(), out_vars)
+            name = f'output_{non_zero[0]}_{non_zero[1]}'
+            m.net.solver_model.addConstr(lin_expr <= 0, name=name)
+        print("model saved in model_details.lp")
+        m.net.solver_model.update()
+        m.net.solver_model.write("model_details.lp")
+
+        # optimize
+        try:
+            m.net.solver_model.optimize()
+        except grb.GurobiError as e:
+            handle_gurobi_error(e.message)
+
+        from gurobipy import GRB
+        if m.net.solver_model.status == GRB.OPTIMAL:
+            status = "unsafe-mip"
+            
+            import numpy as np
+            input_vars = np.array([m.net[name].solver_vars \
+                for name in m.net.root_names if isinstance(m.net[name].solver_vars, list)], 
+                dtype=object).flatten().tolist()
+            print("adv-mip: ", [var.X for var in input_vars])
+
+            print("Feasible solution found!")
+        elif m.net.solver_model.status == GRB.INFEASIBLE:
+            print("The model is infeasible.")
+            status = "safe-mip"
+
+        del m.net.solver_model
+        return None, None, status
+
     lb = m.net.final_node().lower[0].tolist()
     ub = [float('inf') for _ in lb]
 
@@ -1198,7 +1217,7 @@ def build_the_model_mip(m, labels_to_verify=None, save_mps=False, process_dict=N
     lb, ub = torch.tensor(lb), torch.tensor(ub)
     if save_adv and adv_new is not None:
         mip_adv = np.array(adv_new).reshape(input_shape).tolist()
-    print("mip_adv: ", mip_adv)
+        print("mip_adv: ", mip_adv)
     
     return lb, ub, status
 
