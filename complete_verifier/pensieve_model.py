@@ -41,8 +41,8 @@ def get_plain_comparative_pensieve(size) -> nn.Sequential:
             
         def forward(self, obs):
             # input processing
-            input1 = (obs[:, :, :self.input_size]).reshape((-1, 6, 8))
-            input2 = (obs[:, :, :self.input_size] + obs[:, :, self.input_size:2*self.input_size]).reshape((-1, 6, 8))
+            input1 = (obs[:, :, :self.input_size]) # .reshape((-1, 6, 8))
+            input2 = (obs[:, :, :self.input_size] + obs[:, :, self.input_size:2*self.input_size]) # .reshape((-1, 6, 8))
             
             # the model
             copy1_logits = self.base_model(input1)

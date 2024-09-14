@@ -1074,12 +1074,15 @@ def build_the_model_mip(m, labels_to_verify=None, save_mps=False, process_dict=N
                 for name in m.net.root_names if isinstance(m.net[name].solver_vars, list)], 
                 dtype=object).flatten().tolist()
             print("adv-mip: ", [var.X for var in input_vars])
-
             print("Feasible solution found!")
+
         elif m.net.solver_model.status == GRB.INFEASIBLE:
             print("The model is infeasible.")
             status = "safe-mip"
 
+        else:
+            status = "unknown-mip"
+            
         del m.net.solver_model
         return None, None, status
 
