@@ -13,7 +13,7 @@ def get_model(size="small", seed=None, number=None):
         S_LEN = 8
         A_DIM = 6
         if seed is not None and number is not None:
-            model_path = f"../../applications/pensieve/pensieve_lib/pretrain/seed{seed}/model_{number}.pth"
+            model_path = f"../../applications/pensieve/pensieve_lib/pretrain/seed_{seed}/model_{number}.pth"
         else:
             model_path = "../../applications/pensieve/pensieve_lib/pretrain/nn_model_ep_155400.pth"
         actor = network.Network(state_dim=[S_INFO, S_LEN], action_dim=A_DIM)
