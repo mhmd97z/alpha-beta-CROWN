@@ -1,0 +1,43 @@
+general:
+  enable_incomplete_verification: True  # has to be ture for invprop
+  loss_reduction_func: sum
+  sparse_intermediate_bounds_with_ibp: False
+  root_path: ../../applications/pensieve/
+  csv_name: capacity_utilization_difficulty3_eps01.csv
+model:
+  name: pensieve("original", 41, 4)
+  input_shape: [1, 1, 96]
+attack:
+  pgd_order: input_bab
+bab:
+  pruning_in_iteration: True
+  get_upper_bound: False
+  timeout: 1000
+  branching:
+    method: sb
+    input_split:
+      enable: True
+      adv_check: 50 #.inf
+      sb_coeff_thresh: 0.1
+      split_partitions: 2
+      input_split_logger_path: null
+      if_log_repetition: False
+      if_pickle_domains: False
+solver:
+  batch_size: 1024
+  auto_enlarge_batch_size: True
+  base_split_depth: 1
+  alpha-crown:
+    share_alphas: True
+    full_conv_alpha: False
+    lr_alpha: 0.1
+    lr_decay: 0.98  # exponential decay.
+    iteration: 10  # If large, need to make sure decay is not too small.
+  beta-crown:
+    lr_alpha: 0.01
+    lr_beta: 0.1
+    lr_decay: 0.98
+    iteration: 10
+  invprop:
+    apply_output_constraints_to: ["/165", "/297"] #, "/input.20"] # 1, 4, 8, 12
+    oc_lr: 0.1

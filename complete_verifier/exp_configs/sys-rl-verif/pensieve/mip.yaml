@@ -1,0 +1,20 @@
+general:
+  complete_verifier: mip
+  enable_incomplete_verification: true
+  root_path: ../../applications/pensieve/
+  csv_name: capacity_utilization_difficulty3_eps01.csv
+model:
+  name: pensieve("original", 41, 4)
+  input_shape: [1, 1, 96]
+specification:
+  conjunctive_output_constraints: True
+solver:
+  batch_size: 500
+  mip:
+    solver_threads: 28
+    parallel_solvers: 28
+    skip_unsafe: false
+bab:
+  timeout: 1000
+attack:
+  pgd_order: skip

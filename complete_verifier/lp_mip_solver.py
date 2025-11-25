@@ -1053,8 +1053,11 @@ def build_the_model_mip(m, labels_to_verify=None, save_mps=False, process_dict=N
         for iii, c in enumerate(m.c[0]):
             non_zero = c.nonzero().flatten().tolist()
             lin_expr = grb.LinExpr(c.tolist(), out_vars)
-            name = f'output_{non_zero[0]}_{non_zero[1]}'
-            m.net.solver_model.addConstr(lin_expr <= 0, name=name)
+            try:
+                name = f'output_{non_zero[0]}_{non_zero[1]}'
+            except:
+                name = f'output_{non_zero[0]}'
+            m.net.solver_model.addConstr(lin_expr <= -0.00001, name=name)
         print("model saved in model_details.lp")
         m.net.solver_model.update()
         m.net.solver_model.write("model_details.lp")

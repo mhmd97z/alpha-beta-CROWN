@@ -147,7 +147,7 @@ class ABCROWN:
             ptb = PerturbationLpNorm(norm=norm, x_L=data_lb, x_U=data_ub)
         x = BoundedTensor(data, ptb).to(data.device)
         output = model.net(x)
-        print_model(model.net)
+        # print_model(model.net)
         print('Original output:', output)
 
         # save output
