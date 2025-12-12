@@ -10,7 +10,7 @@ GAMMA = 0.99
 EPS = 0.2  # PPO2 epsilon
 
 class Actor(nn.Module):
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, state_dim, action_dim, FEATURE_NUM=128):
         super(Actor, self).__init__()
         # Actor network
         self.s_dim = state_dim
@@ -48,9 +48,8 @@ class Actor(nn.Module):
         # pi = torch.clamp(pi, ACTION_EPS, 1. - ACTION_EPS)
         return self.pi_head(pi_net)
 
-
 class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, state_dim, action_dim, FEATURE_NUM=128):
         super(Critic, self).__init__()
         # Critic network
         self.s_dim = state_dim
@@ -80,7 +79,7 @@ class Critic(nn.Module):
         return value
     
 class Network():
-    def __init__(self, state_dim, action_dim, learning_rate=0.001):
+    def __init__(self, state_dim, action_dim, learning_rate=0.001, FEATURE_NUM=128):
 
         self.s_dim = state_dim
         self.action_dim = action_dim
@@ -88,8 +87,8 @@ class Network():
         self.H_target = 0.1
         self.PPO_TRAINING_EPO = 5
 
-        self.actor = Actor(state_dim, action_dim)
-        self.critic = Critic(state_dim, action_dim)
+        self.actor = Actor(state_dim, action_dim, FEATURE_NUM=FEATURE_NUM)
+        self.critic = Critic(state_dim, action_dim, FEATURE_NUM=FEATURE_NUM)
         self.lr_rate = learning_rate
         self.optimizer = optim.Adam(list(self.actor.parameters()) + \
                                     list(self.critic.parameters()), lr=learning_rate)

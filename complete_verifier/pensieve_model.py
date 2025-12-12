@@ -6,7 +6,8 @@ import pensieve_lib.ppo2 as network
 
 
 def get_model(size="small", seed=None, number=None):
-    assert size in ["small", "mid", "big", "original"]
+    assert size in ["small", "mid", "big", "original", "h64"]
+
 
     if size == "original":
         S_INFO = 6
@@ -19,7 +20,14 @@ def get_model(size="small", seed=None, number=None):
         actor = network.Network(state_dim=[S_INFO, S_LEN], action_dim=A_DIM)
         actor.load_model(model_path)
         pytorch_model = actor.actor
-
+    elif size == "h64":
+        S_INFO = 6
+        S_LEN = 8
+        A_DIM = 6
+        model_path = f"../../applications/pensieve/pensieve_lib/pretrain/h64_seed_{seed}/model_{number}.pth"
+        actor = network.Network(state_dim=[S_INFO, S_LEN], action_dim=A_DIM, FEATURE_NUM=64)
+        actor.load_model(model_path)
+        pytorch_model = actor.actor
     else:
         path_to_onnx_model = f"../../applications/pensieve/model/onnx/pensieve_{size}_simple.onnx"
         onnx_model = onnx.load(path_to_onnx_model)
