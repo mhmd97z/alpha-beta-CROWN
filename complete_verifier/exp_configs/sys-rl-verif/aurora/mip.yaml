@@ -1,12 +1,12 @@
 general:
   complete_verifier: mip
   enable_incomplete_verification: true
-  root_path: ../../applications/pensieve/
-  csv_name: capacity_utilization_input100.csv
+  root_path: ../../applications/aurora/
+  csv_name: capacity_utilization_eps01.csv
   device: cpu
 model:
-  name: pensieve("h64", 41, 2)
-  input_shape: [1, 1, 96]
+  name: aurora(False)
+  input_shape: [1, 1, 18]
 specification:
   conjunctive_output_constraints: True
 solver:
@@ -16,7 +16,7 @@ solver:
     parallel_solvers: 28
     skip_unsafe: false
 bab:
-  timeout: 600
+  timeout: 1600
 attack:
   pgd_order: skip
 data:

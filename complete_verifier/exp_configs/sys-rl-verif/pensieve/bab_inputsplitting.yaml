@@ -3,16 +3,16 @@ general:
   loss_reduction_func: sum
   sparse_intermediate_bounds_with_ibp: False
   root_path: ../../applications/pensieve/
-  csv_name: capacity_utilization_difficulty3_eps01.csv
+  csv_name: capacity_utilization_input70.csv
 model:
-  name: pensieve("original", 41, 4)
+  name: pensieve("h128", 41, 16)
   input_shape: [1, 1, 96]
 attack:
   pgd_order: input_bab
 bab:
   pruning_in_iteration: True
   get_upper_bound: False
-  timeout: 1000
+  timeout: 600
   branching:
     method: sb
     input_split:

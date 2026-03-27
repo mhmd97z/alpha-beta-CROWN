@@ -114,6 +114,7 @@ class ABCROWN:
             stop_func = stop_criterion_batch_any(rhs)
 
         model = LiRPANet(model_ori, in_size=data.shape, c=c)
+        model.rhs = rhs
 
         bound_prop_method = arguments.Config['solver']['bound_prop_method']
         if len(apply_output_constraints_to) > 0:
@@ -664,7 +665,6 @@ class ABCROWN:
             if not verified_success and (
                     arguments.Config['general']['complete_verifier'] == 'mip'
                     or arguments.Config['general']['complete_verifier'] == 'bab-refine'):
-                # rhs = ? NEED TO SAVE TO LIRPA_MODULE
                 mip_skip_unsafe = arguments.Config['solver']['mip']['skip_unsafe']
                 verified_status, ret_mip = mip(
                     model_incomplete, ret, mip_skip_unsafe=mip_skip_unsafe)
