@@ -114,6 +114,7 @@ class ABCROWN:
             stop_func = stop_criterion_batch_any(rhs)
 
         model = LiRPANet(model_ori, in_size=data.shape, c=c)
+        model.rhs = rhs
 
         bound_prop_method = arguments.Config['solver']['bound_prop_method']
         if len(apply_output_constraints_to) > 0:
@@ -147,7 +148,7 @@ class ABCROWN:
             ptb = PerturbationLpNorm(norm=norm, x_L=data_lb, x_U=data_ub)
         x = BoundedTensor(data, ptb).to(data.device)
         output = model.net(x)
-        print_model(model.net)
+        # print_model(model.net)
         print('Original output:', output)
 
         # save output
@@ -282,6 +283,10 @@ class ABCROWN:
 
         self.domain = torch.stack([data_lb.squeeze(0), data_ub.squeeze(0)], dim=-1)
         if arguments.Config['bab']['branching']['input_split']['enable']:
+            if len(arguments.Config['solver']['invprop']['apply_output_constraints_to']) > 0:
+                assert arguments.Config['general']['enable_incomplete_verification']
+                self.model.net.constraints = model_incomplete.net.constraints
+                self.model.net.thresholds = model_incomplete.net.thresholds            
             result = input_bab_parallel(
                 self.model, self.domain, x, rhs=rhs,
                 timeout=timeout, max_iterations=max_iterations,
@@ -483,7 +488,7 @@ class ABCROWN:
                     data_ub=data_max, data_lb=data_min, c=c, data_dict=data_dict,
                     cplex_processes=cplex_processes,
                     rhs=rhs, timeout=timeout, attack_images=this_spec_attack_images,
-                    vnnlib=vnnlib, model=model_ori)
+                    vnnlib=vnnlib, model=model_ori, model_incomplete=model_incomplete)
                 bab_ret.append([index, l, nodes, time.time() - start_time_bab, pidx])
 
             # terminate the corresponding cut inquiry process if exists
@@ -660,12 +665,11 @@ class ABCROWN:
             if not verified_success and (
                     arguments.Config['general']['complete_verifier'] == 'mip'
                     or arguments.Config['general']['complete_verifier'] == 'bab-refine'):
-                # rhs = ? NEED TO SAVE TO LIRPA_MODULE
                 mip_skip_unsafe = arguments.Config['solver']['mip']['skip_unsafe']
                 verified_status, ret_mip = mip(
                     model_incomplete, ret, mip_skip_unsafe=mip_skip_unsafe)
                 verified_success = verified_status != 'unknown'
-                ret.update(ret_mip)
+                # ret.update(ret_mip)
 
             # extract the process pool for cut inquiry
             if bab_args['cut']['enabled'] and bab_args['cut']['cplex_cuts']:

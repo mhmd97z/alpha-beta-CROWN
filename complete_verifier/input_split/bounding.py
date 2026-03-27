@@ -62,11 +62,13 @@ def get_lower_bound_naive(
             lA = None
         return lA
 
+    upper_bound = arguments.Config["bab"]["get_upper_bound"]
     if bounding_method == "alpha-crown":
         ret = self.net.compute_bounds(
-            x=(new_x,), C=C, method='CROWN-Optimized', bound_upper=False,
+            x=(new_x,), C=C, method='CROWN-Optimized', bound_upper=upper_bound,
             return_A=return_A, needed_A_dict=needed_A_dict)
         lb = ret[0]
+        ub = ret[1]
         lA = _get_lA(ret)
     elif bounding_method == 'ibp':
        lb = self.net.compute_bounds(x=(new_x,), C=C, method='ibp')[0]
@@ -81,11 +83,12 @@ def get_lower_bound_naive(
             with torch.no_grad():
                 ret = self.net.compute_bounds(
                     x=(new_x,), C=C, method=bounding_method,
-                    bound_upper=False, return_A=return_A, needed_A_dict=needed_A_dict,
+                    bound_upper=upper_bound, return_A=return_A, needed_A_dict=needed_A_dict,
                     reuse_alpha=bounding_method.lower() == 'crown' and len(alphas) > 0,
                     reference_bounds=reference_interm_bounds
                 )
                 lb = ret[0]
+                ub = ret[1]
                 lA = _get_lA(ret)
 
         if dm_lb is not None:
@@ -106,7 +109,7 @@ def get_lower_bound_naive(
             # The alphas will be actually duplicated in TensorStorage.
             ret_s = alphas * (batch * 2)
 
-    return lb, ret_s, lA
+    return lb, ret_s, lA, ub
 
 
 def get_lower_bound_with_ibp_enhancement(

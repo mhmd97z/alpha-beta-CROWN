@@ -1,0 +1,21 @@
+general:
+  complete_verifier: mip
+  enable_incomplete_verification: true
+  root_path: ../../applications/cmars/
+  csv_name: output30_robustness_lower00upper10.csv
+  device: cpu
+model:
+  name: cmars(2, 32, 30)
+  input_shape: [1, 1, 38]
+specification:
+  conjunctive_output_constraints: True
+solver:
+  batch_size: 500
+  mip:
+    solver_threads: 28
+    parallel_solvers: 28
+    skip_unsafe: false
+bab:
+  timeout: 600
+attack:
+  pgd_order: skip

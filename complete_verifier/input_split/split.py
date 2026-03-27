@@ -21,7 +21,7 @@ import arguments
 @torch.no_grad()
 def input_split_parallel(x_L, x_U, shape=None,
                          cs=None, thresholds=None, split_depth=1, i_idx=None,
-                         split_partitions=2):
+                         split_partitions=2, repetition=None):
     """
     Split the x_L and x_U given split_idx and split_depth.
     """
@@ -73,11 +73,17 @@ def input_split_parallel(x_L, x_U, shape=None,
     if thresholds is not None:
         thresholds = thresholds.repeat(split_partitions ** split_depth, 1)
     split_idx = i_idx.repeat(split_partitions ** split_depth, 1)
-    return new_x_L, new_x_U, cs, thresholds, split_depth, split_idx
+
+    if repetition is not None:
+        repetition = repetition.repeat(split_partitions ** split_depth, 1)
+        repetition += split_depth
+
+    return new_x_L, new_x_U, cs, thresholds, split_depth, split_idx, repetition
 
 
 def get_split_depth(x_L, split_partitions=2):
-    split_depth = 1
+    base_split_depth = arguments.Config["solver"]["base_split_depth"]
+    split_depth = base_split_depth
     min_batch_size_ratio = arguments.Config["solver"]["min_batch_size_ratio"]
     batch_size = arguments.Config["solver"]["batch_size"]
     if len(x_L) < min_batch_size_ratio * batch_size:

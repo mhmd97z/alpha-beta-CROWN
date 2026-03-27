@@ -83,7 +83,10 @@ class ConfigHandler:
                           hierarchy=h + ["sparse_alpha"])
         self.add_argument("--no_sparse_interm", action='store_false',
                           help='Enable/disable sparse intermediate bounds.',
-                          hierarchy=h + ["sparse_interm"])
+                          hierarchy=h + ["sparse_interm"]),
+        self.add_argument("--sparse_intermediate_bounds_with_ibp", default=True,
+                          help='Whether sparse intermediate bounds with ibp.',
+                          hierarchy=h + ["sparse_intermediate_bounds_with_ibp"]),
         self.add_argument("--save_adv_example", action='store_true',
                           help='Save returned adversarial example in file.',
                           hierarchy=h + ["save_adv_example"])
@@ -249,6 +252,10 @@ class ConfigHandler:
         self.add_argument("--rhs_offset", type=float, default=None,
                           help='Adding an offset to RHS.',
                           hierarchy=h + ['rhs_offset'])
+        self.add_argument("--conjunctive_output_constraints", action='store_true',
+                          help='Conjunction in the output constraints.',
+                          hierarchy=h + ["conjunctive_output_constraints"])
+        
 
         h = ["solver"]
         self.add_argument("--batch_size", type=int, default=64,
@@ -261,6 +268,9 @@ class ConfigHandler:
         self.add_argument('--min_batch_size_ratio', type=float, default=0.1,
                           help='The minimum batch size ratio in each iteration (splitting multiple layers if the number of domains is smaller than min_batch_size_ratio * batch_size).',
                           hierarchy=h + ["min_batch_size_ratio"])
+        self.add_argument('--base_split_depth', type=int, default=1,
+                          help='The base value of split depth.',
+                          hierarchy=h + ["base_split_depth"])
         self.add_argument("--use_float64_in_last_iteration", action='store_true',
                           help='Use double fp (float64) at the last iteration in alpha/beta CROWN.',
                           hierarchy=h + ["use_float64_in_last_iteration"])
@@ -642,6 +652,15 @@ class ConfigHandler:
         self.add_argument("--input_split_partitions", type=int, default=2,
                           help='How many domains to split to for each dimension at each time. By default, it is 2. In very few limited experimental cases, can change to larger numbers.',
                           hierarchy=h + ["split_partitions"])
+        self.add_argument("--input_split_logger_path", type=str, default="results/log/",
+                          help='Where to save the input splitting log.',
+                          hierarchy=h + ["input_split_logger_path"])
+        self.add_argument("--if_log_repetition", default=False,
+                          help='Whether to keep repetition count.',
+                          hierarchy=h + ["if_log_repetition"])
+        self.add_argument("--if_pickle_domains", default=False,
+                          help='Whether pickle the domains.',
+                          hierarchy=h + ["if_pickle_domains"])
         self.add_argument("--sb_margin_weight", default=1.0, type=float,
                           help='Weight for the margin term in the sb heuristic.',
                           hierarchy=h + ["sb_margin_weight"])

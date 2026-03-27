@@ -71,8 +71,12 @@ def mip(model, ret_incomplete, labels_to_verify=None, mip_skip_unsafe=False):
         'global_lb', 'lower_bounds', 'upper_bounds', 'refined_betas']}
 
     if arguments.Config["general"]["complete_verifier"] == "mip":
+        if arguments.Config["specification"]["conjunctive_output_constraints"]:
+            _, _, mip_status = model.build_the_model_mip()
+            return mip_status, _
+
         mip_global_lb, mip_global_ub, mip_status = model.build_the_model_mip(
-            labels_to_verify=labels_to_verify, save_adv=True, mip_skip_unsafe=mip_skip_unsafe)
+        labels_to_verify=labels_to_verify, save_adv=True, mip_skip_unsafe=mip_skip_unsafe)
         if mip_global_lb.ndim == 1:
             mip_global_lb = mip_global_lb.unsqueeze(-1)  # Missing batch dimension.
         if mip_global_ub.ndim == 1:
@@ -80,9 +84,9 @@ def mip(model, ret_incomplete, labels_to_verify=None, mip_skip_unsafe=False):
         print(f'MIP solved lower bound: {mip_global_lb}')
         print(f'MIP solved upper bound: {mip_global_ub}')
         ret['global_lb'] = mip_global_lb
-        verified_status = "safe-mip"
         # Batch size is always 1.
         labels_to_check = labels_to_verify if labels_to_verify is not None else range(len(mip_status))
+        verified_status = "safe-mip"
         for pidx in labels_to_check:
             if mip_global_lb[pidx] >= 0:
                 # Lower bound > 0, verified.
@@ -100,7 +104,9 @@ def mip(model, ret_incomplete, labels_to_verify=None, mip_skip_unsafe=False):
             assert mip_status[pidx] == 9 or mip_status[pidx] == -1, "should only be timeout for label pidx"
             verified_status = "unknown-mip"
         print(f"verified {verified_status} with init mip!")
+
         return verified_status, ret
+
     elif arguments.Config["general"]["complete_verifier"] == "bab-refine":
         print("Start solving intermediate bounds with MIP...")
         refined_lower_bounds, refined_upper_bounds, refined_betas = model.build_the_model_mip_refine(
@@ -1028,7 +1034,6 @@ def build_the_model_mip(m, labels_to_verify=None, save_mps=False, process_dict=N
         to support async sharing with the main thread
     Output: gurobi mip model solving lb and status
     """
-
     def gen_timestamp():
         return str(int(time.time() * 100.0) % 100000000)
 
@@ -1042,6 +1047,50 @@ def build_the_model_mip(m, labels_to_verify=None, save_mps=False, process_dict=N
                     mip_threads=mip_threads, model_type="mip", x=x, intermediate_bounds=intermediate_bounds)
 
     out_vars = m.net[m.net.final_name].solver_vars
+
+    if arguments.Config["specification"]["conjunctive_output_constraints"]:
+        # adding output constraints
+        rhs = m.rhs[0] if hasattr(m, 'rhs') and m.rhs is not None else None
+        for iii, c in enumerate(m.c[0]):
+            non_zero = c.nonzero().flatten().tolist()
+            lin_expr = grb.LinExpr(c.tolist(), out_vars)
+            try:
+                name = f'output_{non_zero[0]}_{non_zero[1]}'
+            except:
+                name = f'output_{non_zero[0]}'
+            threshold = float(rhs[iii]) - 0.00001 if rhs is not None else -0.00001
+            m.net.solver_model.addConstr(lin_expr <= threshold, name=name)
+        print("model saved in model_details.lp")
+        m.net.solver_model.update()
+        m.net.solver_model.write("model_details.lp")
+
+        # optimize
+        try:
+            m.net.solver_model.optimize()
+        except grb.GurobiError as e:
+            handle_gurobi_error(e.message)
+
+        from gurobipy import GRB
+        if m.net.solver_model.status == GRB.OPTIMAL:
+            status = "unsafe-mip"
+            
+            import numpy as np
+            input_vars = np.array([m.net[name].solver_vars \
+                for name in m.net.root_names if isinstance(m.net[name].solver_vars, list)], 
+                dtype=object).flatten().tolist()
+            print("adv-mip: ", [var.X for var in input_vars])
+            print("Feasible solution found!")
+
+        elif m.net.solver_model.status == GRB.INFEASIBLE:
+            print("The model is infeasible.")
+            status = "safe-mip"
+
+        else:
+            status = "unknown-mip"
+            
+        del m.net.solver_model
+        return None, None, status
+
     lb = m.net.final_node().lower[0].tolist()
     ub = [float('inf') for _ in lb]
 
@@ -1176,6 +1225,8 @@ def build_the_model_mip(m, labels_to_verify=None, save_mps=False, process_dict=N
     lb, ub = torch.tensor(lb), torch.tensor(ub)
     if save_adv and adv_new is not None:
         mip_adv = np.array(adv_new).reshape(input_shape).tolist()
+        print("mip_adv: ", mip_adv)
+    
     return lb, ub, status
 
 def run_get_cuts_subprocess(model_filename):

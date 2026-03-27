@@ -27,6 +27,9 @@ from input_split.attack import (massive_pgd_attack, check_adv,
                                 update_rhs_with_attack)
 from input_split.branching_heuristics import input_split_branching
 from input_split.split import input_split_parallel, get_split_depth
+from input_split.pickle_domains import pickle_domains
+
+from tensorboardX import SummaryWriter
 
 Visited, Solve_alpha, storage_depth = 0, False, 0
 
@@ -34,17 +37,25 @@ Visited, Solve_alpha, storage_depth = 0, False, 0
 def batch_verification_input_split(
         d, net, batch, num_iter, decision_thresh, shape=None,
         bounding_method="crown", branching_method="sb",
-        stop_func=stop_criterion_batch_any, split_partitions=2):
+        stop_func=stop_criterion_batch_any, split_partitions=2,
+        writer=None):
     input_split_args = arguments.Config["bab"]["branching"]["input_split"]
-
+    if_pickle_domains = input_split_args["if_pickle_domains"]
     split_start_time = time.time()
     global Visited
 
     # STEP 1: find the neuron to split and create new split domains.
     pickout_start_time = time.time()
     ret = d.pick_out_batch(batch, device=net.x.device)
-    alphas, dm_lb, x_L, x_U, cs, thresholds, split_idx, last_split_idx = ret
+    alphas, dm_lb, x_L, x_U, cs, thresholds, split_idx, last_split_idx, repetition = ret
     pickout_time = time.time() - pickout_start_time
+
+    if repetition is not None:
+        print("repetition avg: ", repetition.mean())
+        if writer:
+            writer.add_scalar('macro/repetition_avg', repetition.mean(), d.iter)
+            writer.add_scalar('macro/repetition_min', repetition.min(), d.iter)
+            writer.add_scalar('macro/repetition_max', repetition.max(), d.iter)
 
     if input_split_args['update_rhs_with_attack']:
         thresholds = update_rhs_with_attack(x_L, x_U, cs, thresholds, dm_lb,
@@ -53,9 +64,9 @@ def batch_verification_input_split(
     # STEP 2: find the neuron to split and create new split domains.
     decision_start_time = time.time()
     split_depth = get_split_depth(x_L, split_partitions=split_partitions)
-    new_x_L, new_x_U, cs, thresholds, split_depth, last_split_idx = input_split_parallel(
+    new_x_L, new_x_U, cs, thresholds, split_depth, last_split_idx, repetition = input_split_parallel(
         x_L, x_U, shape, cs, thresholds, split_depth=split_depth, i_idx=split_idx,
-        split_partitions=split_partitions)
+        split_partitions=split_partitions, repetition=repetition)
 
     if input_split_args["compare_with_old_bounds"]:
         assert split_depth == 1
@@ -67,17 +78,39 @@ def batch_verification_input_split(
 
     decision_time = time.time() - decision_start_time
 
+    print("Batch size: ", new_x_L.shape[0])
     # STEP 3: Compute bounds for all domains.
     bounding_start_time = time.time()
+    if if_pickle_domains:
+        alphas_prev = alphas.copy()
+        bounding_method = "alpha-crown"
+        
     ret = net.get_lower_bound_naive(
         dm_lb=dm_lb, dm_l=new_x_L, dm_u=new_x_U, alphas=alphas,
         bounding_method=bounding_method, branching_method=branching_method,
         C=cs, stop_criterion_func=stop_func, thresholds=thresholds,
         num_iter=num_iter, split_partitions=split_partitions)
 
+    if writer:
+        writer.add_scalar('macro/split_depth', split_depth, d.iter)
+        writer.add_scalar('macro/batch', new_x_L.shape[0], d.iter)
+
     # here alphas is a dict
-    new_dm_lb, alphas, lA = ret
+    new_dm_lb, alphas, lA, new_dm_ub = ret
     bounding_time = time.time() - bounding_start_time
+
+    if if_pickle_domains:
+        bounding_method = "forward+crown"
+        new_dm_lb_plain, _, _ = net.get_lower_bound_naive(
+            dm_lb=dm_lb, dm_l=new_x_L, dm_u=new_x_U, alphas=alphas_prev,
+            bounding_method=bounding_method, branching_method=branching_method,
+            C=cs, stop_criterion_func=stop_func, thresholds=thresholds,
+            num_iter=num_iter, split_partitions=split_partitions)
+
+        pickle_time = time.time()
+        exp = writer.logdir.split("/")[-1]
+        pickle_domains(new_dm_lb, new_x_L.detach(), new_x_U.detach(), repetition, exp, new_dm_lb_plain)
+        print("pickle_time: ", time.time() - pickle_time)
 
     decision_time -= time.time()
     split_idx = input_split_branching(
@@ -86,10 +119,23 @@ def batch_verification_input_split(
         last_split_idx=last_split_idx)
 
     decision_time += time.time()
+
+    if writer:
+        writer.add_histogram('micro/split_idx', split_idx.clone().cpu().data.numpy(), d.iter)
+        if new_dm_ub is not None:
+            writer.add_histogram('micro/min_ub_domain', new_dm_ub.min(dim=1, keepdim=True).values.clone().cpu().data.numpy(), d.iter)
+            writer.add_histogram('micro/max_ub_domain', new_dm_ub.max(dim=1, keepdim=True).values.clone().cpu().data.numpy(), d.iter)
+            writer.add_scalar('macro/max_ub_batch', new_dm_ub.max(), d.iter)
+
+    if new_dm_ub is not None:
+        print("max_ub_batch: ", new_dm_ub.max())
+        
+    copy_count = split_partitions ** split_depth
     # STEP 4: Add new domains back to domain list.
     adddomain_start_time = time.time()
     d.add(new_dm_lb, new_x_L.detach(), new_x_U.detach(),
-          alphas, cs, thresholds, split_idx, last_split_idx=last_split_idx)
+          alphas, cs, thresholds, split_idx, last_split_idx=last_split_idx, 
+          repetition=repetition, copy_count=copy_count)
     adddomain_time = time.time() - adddomain_start_time
 
     total_time = time.time() - split_start_time
@@ -159,6 +205,8 @@ def input_bab_parallel(net, init_domain, x, rhs=None,
     adv_check = input_split_args['adv_check']
     split_partitions = input_split_args['split_partitions']
     catch_assertion = input_split_args['catch_assertion']
+    if_log_repetition = input_split_args['if_log_repetition']
+    input_split_logger_path = input_split_args['input_split_logger_path']
 
     if net.device != 'cpu' and auto_enlarge_batch_size:
         total_vram = torch.cuda.get_device_properties(net.device).total_memory
@@ -218,10 +266,25 @@ def input_bab_parallel(net, init_domain, x, rhs=None,
     )
     max_depth = max(int(math.log(max(min_batch_size, 1)) // math.log(split_partitions)), 1)
     storage_depth = min(max_depth, dm_l.shape[-1])
+
+    print("input_split_logger_path: ", input_split_logger_path)
+    print("input_split_logger_path: ", type(input_split_logger_path))
+    if input_split_logger_path is not None:
+        prop = arguments.Config["specification"]["vnnlib_path"].split("/")[-1].split(".")[0]
+        writer = SummaryWriter(input_split_logger_path + prop)
+    else:
+        writer = None
+
+    if if_log_repetition:
+        initial_repetition = torch.zeros((1, 1)).to(rhs)
+    else:
+        initial_repetition = None
+
     domains = UnsortedInputDomainList(
         storage_depth, use_alpha=use_alpha,
         sort_index=input_split_args['sort_index'],
-        sort_descending=input_split_args['sort_descending'])
+        sort_descending=input_split_args['sort_descending'], 
+        writer=writer, if_log_repetition=if_log_repetition)
 
     initial_verified, remaining_index = initial_verify_criterion(global_lb, rhs)
     if initial_verified:
@@ -231,7 +294,8 @@ def input_bab_parallel(net, init_domain, x, rhs=None,
         split_idx = input_split_branching(
             net, global_lb, dm_l, dm_u, lA, rhs, branching_method, storage_depth)
         domains.add(global_lb, dm_l.detach(), dm_u.detach(),
-                    ret['alphas'], net.c, rhs, split_idx, remaining_index)
+                    ret['alphas'], net.c, rhs, split_idx, remaining_index, 
+                    repetition=initial_repetition, copy_count=1)
         if arguments.Config["attack"]["pgd_order"] == "after":
             if attack_in_input_bab_parallel(net.model_ori, domains, x, vnnlib=vnnlib).all():
                 print("pgd attack succeed in input_bab_parallel")
@@ -260,7 +324,7 @@ def input_bab_parallel(net, init_domain, x, rhs=None,
                 adv_check_time = time.time() - adv_check_start_time
                 print(f"Adv attack time: {adv_check_time:.4f}s")
 
-        if net.device is not 'cpu' and auto_enlarge_batch_size:
+        if net.device != 'cpu' and auto_enlarge_batch_size:
             current_vram = torch.cuda.memory_reserved()
             if current_vram < 0.45 * total_vram and batch < len(domains) and num_iter > 1:
                 if batch * 2 > len(domains):
@@ -277,13 +341,19 @@ def input_bab_parallel(net, init_domain, x, rhs=None,
         if branching_method == 'brute-force' and num_iter <= input_split_args['bf_iters']:
             batch_ = input_split_args['bf_batch_size']
 
-        print('Batch size:', batch_)
+        if writer:
+            writer.add_scalar('macro/domain_count', len(domains), domains.iter)
+            writer.add_scalar('macro/split_partitions', split_partitions, domains.iter)
+            
+            if if_log_repetition:
+                writer.add_histogram('micro/repetition', domains.repetition._storage[:len(domains)].clone().cpu().data.numpy(), domains.iter)
+            
         try:
             global_lb = batch_verification_input_split(
                 domains, net, batch_,
                 num_iter=num_iter, decision_thresh=rhs, shape=x.shape,
                 bounding_method=bounding_method, branching_method=branching_method,
-                stop_func=stop_func, split_partitions=split_partitions)
+                stop_func=stop_func, split_partitions=split_partitions, writer=writer)
         except AssertionError:
             if catch_assertion:
                 global_lb = torch.ones(net.c.shape[0], net.c.shape[1],

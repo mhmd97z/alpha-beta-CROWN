@@ -1,5 +1,7 @@
-*.pt
 *.npz
 *.npy
 data/
 checkpoints/
+results/
+input_split/pickled/
+exp_configs/sys-rl-verif/cmars/*.yaml
